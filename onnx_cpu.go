@@ -74,99 +74,17 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 	}
 	// create the metadata
 	ocpu.metadata = createMetadata(inputInfo, outputInfo)
-	// declare the input Tensor for the near IR person model
-	// fill blank tensor with an "image" of the correct size
-	// the image
-	blank := make([]uint8, 300*300*3)
-	inputShape := ort.NewShape(1, 300, 300, 3)
-	inputTensor, err := ort.NewTensor(inputShape, blank)
-	if err != nil {
-		return nil, err
+	inputNames := make([]string, 0, len(inputInfo))
+	for _, in := range inputInfo {
+		inputNames = append(inputNames, in.Name)
 	}
-
-	// declare the output Tensors for the near IR person model
-	outputTensors := make([]*ort.Tensor[float32], 8)
-
-	// detection_anchor_indices
-	outputShape0 := ort.NewShape(1, 100)
-	outputTensor0, err := ort.NewEmptyTensor[float32](outputShape0)
-	if err != nil {
-		return nil, err
+	outputNames := make([]string, 0, len(outputInfo))
+	for _, out := range outputInfo {
+		ouputNames = append(outputNames, out.Name)
 	}
-	outputTensors[0] = outputTensor0
-	// detection_boxes
-	outputShape1 := ort.NewShape(1, 100, 4)
-	outputTensor1, err := ort.NewEmptyTensor[float32](outputShape1)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[1] = outputTensor1
-	// detection_classes
-	outputShape2 := ort.NewShape(1, 100)
-	outputTensor2, err := ort.NewEmptyTensor[float32](outputShape2)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[2] = outputTensor2
-	// detection_multiclass_scores
-	outputShape3 := ort.NewShape(1, 100, 2)
-	outputTensor3, err := ort.NewEmptyTensor[float32](outputShape3)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[3] = outputTensor3
-	// detection_scores
-	outputShape4 := ort.NewShape(1, 100)
-	outputTensor4, err := ort.NewEmptyTensor[float32](outputShape4)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[4] = outputTensor4
-	//num_detections
-	outputShape5 := ort.NewShape(1)
-	outputTensor5, err := ort.NewEmptyTensor[float32](outputShape5)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[5] = outputTensor5
-	// raw_detection_boxes
-	outputShape6 := ort.NewShape(1, 1917, 4)
-	outputTensor6, err := ort.NewEmptyTensor[float32](outputShape6)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[6] = outputTensor6
-	// raw_detection_scores
-	outputShape7 := ort.NewShape(1, 1917, 2)
-	outputTensor7, err := ort.NewEmptyTensor[float32](outputShape7)
-	if err != nil {
-		return nil, err
-	}
-	outputTensors[7] = outputTensor7
-
-	options, err := ort.NewSessionOptions()
-	if err != nil {
-		return nil, err
-	}
-
-	arbitraryOutput := make([]ort.ArbitraryTensor, len(outputTensors))
-	for i, tensor := range outputTensors {
-		arbitraryOutput[i] = tensor
-	}
-	session, err := ort.NewAdvancedSession(cfg.modelPath,
-		[]string{"input_tensor"},
-		[]string{
-			"detection_anchor_indices",
-			"detection_boxes",
-			"detection_classes",
-			"detection_multiclass_scores",
-			"detection_scores",
-			"num_detections",
-			"raw_detection_boxes",
-			"raw_detection_scores"},
-		[]ort.ArbitraryTensor{inputTensor},
-		arbitraryOutput,
-		options,
+	// create the session
+	session, err := ort.NewDynamicAdvancedSession(cfg.modelPath,
+		inputNames, outputNames, options,
 	)
 
 	modelSes := modelSession{
