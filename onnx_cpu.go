@@ -43,9 +43,11 @@ func (cfg *Config) Validate(path string) ([]string, error) {
 }
 
 type modelSession struct {
-	Session *ort.AdvancedSession
-	Input   *ort.Tensor[uint8]
-	Output  []*ort.Tensor[float32]
+	Session    *ort.DynamicAdvancedSession
+	InputInfo  []ort.InputOutputInfo
+	OutputInfo []ort.InputOutputInfo
+	InputType  ort.TensorElementDataType
+	OutputType ort.TensorElementDataType
 }
 
 type onnxCPU struct {
@@ -74,23 +76,56 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 	}
 	// create the metadata
 	ocpu.metadata = createMetadata(inputInfo, outputInfo)
+	// create the inputs and outputs
+	// input
 	inputNames := make([]string, 0, len(inputInfo))
+	var inputType ort.TensorElementDataType
+	if len(inputInfo) != 0 {
+		inputType = inputInfo[0].DataType
+		if inputType != ort.TensorElementDataTypeFloat && inputType != ort.TensorElementDataTypeUint8 {
+			return nil, errors.Errorf("currently only supporting input tensors of type uint8 or float32, got %s", inputType)
+		}
+	}
 	for _, in := range inputInfo {
+		if in.DataType != inputType {
+			return nil, errors.New("all input tensors must be of the same data type, mixing data types not currently supported.")
+		}
 		inputNames = append(inputNames, in.Name)
 	}
+	// output
 	outputNames := make([]string, 0, len(outputInfo))
+	var outputType ort.TensorElementDataType
+	outputType = ort.TensorElementDataTypeUndefined
+	if len(outputInfo) != 0 {
+		outputType = outputInfo[0].DataType
+		if outputType != ort.TensorElementDataTypeFloat && inputType != ort.TensorElementDataTypeUint8 {
+			return nil, errors.Errorf("currently only supporting output tensors of type uint8 or float32, got %s", inputType)
+		}
+	}
 	for _, out := range outputInfo {
-		ouputNames = append(outputNames, out.Name)
+		if out.DataType != outputType {
+			return nil, errors.New("all output tensors must be of the same data type, mixing data types not currently supported.")
+		}
+		outputNames = append(outputNames, out.Name)
 	}
 	// create the session
+	options, err := ort.NewSessionOptions()
+	if err != nil {
+		return nil, err
+	}
 	session, err := ort.NewDynamicAdvancedSession(cfg.modelPath,
 		inputNames, outputNames, options,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	modelSes := modelSession{
-		Session: session,
-		Input:   inputTensor,
-		Output:  outputTensors,
+		Session:    session,
+		InputInfo:  inputInfo,
+		OutputInfo: outputInfo,
+		InputType:  inputType,
+		OutputType: outputType,
 	}
 	ocpu.session = modelSes
 
@@ -106,85 +141,125 @@ func (ocpu *onnxCPU) DoCommand(ctx context.Context, cmd map[string]interface{}) 
 }
 
 func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors, error) {
-	input, err := processInput(tensors)
-	if err != nil {
-		return nil, err
-	}
-	inTensor := ocpu.session.Input.GetData()
-	copy(inTensor, input)
-	err = ocpu.session.Session.Run()
-	if err != nil {
-		return nil, err
-	}
-	outputData := make([][]float32, 0, 8)
-	for _, out := range ocpu.session.Output {
-		outputData = append(outputData, out.GetData())
-	}
-	return processOutput(outputData)
-}
-
-func processInput(tensors ml.Tensors) ([]uint8, error) {
-	var imageTensor *tensor.Dense
-	// if length of tensors is 1, just grab the first tensor
-	// if more than 1 grab the one called input tensor, or image
-	if len(tensors) == 1 {
-		for _, t := range tensors {
-			imageTensor = t
-			break
+	outTensors := ml.Tensors{}
+	// TODO: make this less bad, is it really only possible by doing a type switch?
+	switch ocpu.session.InputType {
+	case ort.TensorElementDataTypeFloat:
+		inputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.InputInfo))
+		err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		for name, t := range tensors {
-			if name == "image" || name == "input_tensor" {
-				imageTensor = t
-				break
+		switch ocpu.session.OutputType {
+		case ort.TensorElementDataTypeFloat:
+			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
+			arbIn := toArbitraryTensor(inputs)
+			arbOut := toArbitraryTensor(outputs)
+			err = ocpu.session.Session.Run(arbIn, arbOut)
+			if err != nil {
+				return nil, err
 			}
+			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
+			if err != nil {
+				return nil, err
+			}
+		case ort.TensorElementDataTypeUint8:
+			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
+			arbIn := toArbitraryTensor(inputs)
+			arbOut := toArbitraryTensor(outputs)
+			err = ocpu.session.Session.Run(arbIn, arbOut)
+			if err != nil {
+				return nil, err
+			}
+			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errors.Errorf("output tensor type %s not implemented", ocpu.session.OutputType.String())
 		}
+	case ort.TensorElementDataTypeUint8:
+		inputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.InputInfo))
+		err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
+		if err != nil {
+			return nil, err
+		}
+		switch ocpu.session.OutputType {
+		case ort.TensorElementDataTypeFloat:
+			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
+			arbIn := toArbitraryTensor(inputs)
+			arbOut := toArbitraryTensor(outputs)
+			err = ocpu.session.Session.Run(arbIn, arbOut)
+			if err != nil {
+				return nil, err
+			}
+			err := onnxTensorsToMlTensors[float32](outputs, outTensors, ocpu.session.OutputInfo)
+			if err != nil {
+				return nil, err
+			}
+		case ort.TensorElementDataTypeUint8:
+			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
+			arbIn := toArbitraryTensor(inputs)
+			arbOut := toArbitraryTensor(outputs)
+			err = ocpu.session.Session.Run(arbIn, arbOut)
+			if err != nil {
+				return nil, err
+			}
+			err := onnxTensorsToMlTensors[uint8](outputs, outTensors, ocpu.session.OutputInfo)
+			if err != nil {
+				return nil, err
+			}
+		default:
+			return nil, errors.Errorf("output tensor type %s not implemented", ocpu.session.OutputType.String())
+		}
+	default:
+		return nil, errors.Errorf("input tensor type %s not implemented", ocpu.session.InputType.String())
 	}
-	if imageTensor == nil {
-		return nil, errors.New("no valid input tensor called 'image' or 'input_tensor' found")
-	}
-	if uint8Data, ok := imageTensor.Data().([]uint8); ok {
-		return uint8Data, nil
-	}
-	return nil, errors.Errorf("input tensor must be of tensor type UIn8, got %v", imageTensor.Dtype())
+	return outTensors, nil
 }
 
-func processOutput(outputs [][]float32) (ml.Tensors, error) {
-	// there are 8 output tensors. Turn them into tensors with the right backing
-	outMap := ml.Tensors{}
-	outMap["detection_anchor_indices"] = tensor.New(
-		tensor.WithShape(1, 100),
-		tensor.WithBacking(outputs[0]),
-	)
-	outMap["location"] = tensor.New(
-		tensor.WithShape(1, 100, 4),
-		tensor.WithBacking(outputs[1]),
-	)
-	outMap["category"] = tensor.New(
-		tensor.WithShape(1, 100),
-		tensor.WithBacking(outputs[2]),
-	)
-	outMap["detection_multiclass_scores"] = tensor.New(
-		tensor.WithShape(1, 100, 2),
-		tensor.WithBacking(outputs[3]),
-	)
-	outMap["score"] = tensor.New(
-		tensor.WithShape(1, 100),
-		tensor.WithBacking(outputs[4]),
-	)
-	outMap["num_detections"] = tensor.New(
-		tensor.WithShape(1),
-		tensor.WithBacking(outputs[5]),
-	)
-	outMap["raw_detection_boxes"] = tensor.New(
-		tensor.WithShape(1, 1917, 4),
-		tensor.WithBacking(outputs[6]),
-	)
-	outMap["raw_detection_scores"] = tensor.New(
-		tensor.WithShape(1, 1917, 2),
-		tensor.WithBacking(outputs[7]),
-	)
-	return outMap, nil
+func toArbitraryTensor[T ort.TensorData](in []*ort.Tensor[T]) []ort.ArbitraryTensor {
+	out := make([]ort.ArbitraryTensor, 0, len(in))
+	for _, t := range in {
+		out = append(out, t)
+	}
+	return out
+}
+
+// copy the data into the input tensors
+func mlTensorsToOnnxTensors[T ort.TensorData](tensors ml.Tensors, inputs []*ort.Tensor[T], info []ort.InputOutputInfo) error {
+	// order is given by InputInfo array. The names must match
+	for _, inf := range info {
+		denseTensor, found := tensors[inf.Name]
+		if !found {
+			return errors.Errorf("input tensor with name %q is required", inf.Name)
+		}
+		typedDenseData, ok := denseTensor.Data().([]T)
+		if !ok {
+			return errors.Errorf("input tensor %s is of type %v, not %s", inf.Name, denseTensor.Dtype(), inf.DataType.String())
+		}
+		input, err := ort.NewTensor(inf.Dimensions, typedDenseData)
+		if err != nil {
+			return errors.Wrapf(err, "input tensor %s encountered an error", inf.Name)
+		}
+		inputs = append(inputs, input)
+	}
+	return nil
+}
+
+func onnxTensorsToMlTensors[T ort.TensorData](outputs []*ort.Tensor[T], tensors ml.Tensors, info []ort.InputOutputInfo) error {
+	for i, inf := range info {
+		t := outputs[i]
+		shape := make([]int, 0, len(inf.Dimensions))
+		for _, d := range inf.Dimensions {
+			shape = append(shape, int(d))
+		}
+		tensors[inf.Name] = tensor.New(
+			tensor.WithShape(shape...),
+			tensor.WithBacking(t.GetData()),
+		)
+	}
+	return nil
 }
 
 func (ocpu *onnxCPU) Metadata(ctx context.Context) (mlmodel.MLMetadata, error) {
@@ -194,17 +269,6 @@ func (ocpu *onnxCPU) Metadata(ctx context.Context) (mlmodel.MLMetadata, error) {
 func (ocpu *onnxCPU) Close(ctx context.Context) error {
 	// destroy session
 	err := ocpu.session.Session.Destroy()
-	if err != nil {
-		return err
-	}
-	// destroy tensors
-	for _, outTensor := range ocpu.session.Output {
-		err = outTensor.Destroy()
-		if err != nil {
-			return err
-		}
-	}
-	err = ocpu.session.Input.Destroy()
 	if err != nil {
 		return err
 	}
