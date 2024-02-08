@@ -35,7 +35,7 @@ func TestImageDetection(t *testing.T) {
 	resized := resize.Resize(300, 300, img, resize.Bilinear)
 	// create input tensor
 	inMap := ml.Tensors{}
-	inMap["image"] = tensor.New(
+	inMap["input_tensor"] = tensor.New(
 		tensor.WithShape(1, resized.Bounds().Dy(), resized.Bounds().Dx(), 3),
 		tensor.WithBacking(rimage.ImageToUInt8Buffer(resized)),
 	)
@@ -43,10 +43,19 @@ func TestImageDetection(t *testing.T) {
 	outMap, err := theModel.Infer(context.Background(), inMap)
 	test.That(t, err, test.ShouldBeNil)
 	test.That(t, len(outMap), test.ShouldEqual, 8)
+	test.That(t, outMap, test.ShouldContainKey, "detection_scores")
+	expectedShape := tensor.Shape{1, 100}
+	test.That(t, outMap["detection_scores"].Shape(), test.ShouldResemble, expectedShape)
 	// does the first detection have a confidence more than 90%
-	detScore, err := outMap["score"].At(0, 0)
+	detScore, err := outMap["detection_scores"].At(0, 0)
 	test.That(t, err, test.ShouldBeNil)
 	score, ok := detScore.(float32)
 	test.That(t, ok, test.ShouldBeTrue)
 	test.That(t, score, test.ShouldBeGreaterThan, 0.9)
+	// does the second detection has a confidence of less than .5
+	detScore, err = outMap["detection_scores"].At(0, 1)
+	test.That(t, err, test.ShouldBeNil)
+	score, ok = detScore.(float32)
+	test.That(t, ok, test.ShouldBeTrue)
+	test.That(t, score, test.ShouldBeLessThan, 0.5)
 }

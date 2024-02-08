@@ -146,18 +146,29 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 	switch ocpu.session.InputType {
 	case ort.TensorElementDataTypeFloat:
 		inputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.InputInfo))
-		err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
+		inputs, err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
 		if err != nil {
 			return nil, err
 		}
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
 			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
+			for _ = range ocpu.session.OutputInfo {
+				o := new(ort.Tensor[float32])
+				outputs = append(outputs, o)
+			}
 			arbIn := toArbitraryTensor(inputs)
-			arbOut := toArbitraryTensor(outputs)
+			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
 			err = ocpu.session.Session.Run(arbIn, arbOut)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to Run on Infer command")
+			}
+			for _, out := range arbOut {
+				if o, ok := out.(*ort.Tensor[float32]); ok {
+					outputs = append(outputs, o)
+				} else {
+					return nil, errors.New("could not convert output tensor from Run to float32")
+				}
 			}
 			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -166,10 +177,17 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 		case ort.TensorElementDataTypeUint8:
 			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
 			arbIn := toArbitraryTensor(inputs)
-			arbOut := toArbitraryTensor(outputs)
+			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
 			err = ocpu.session.Session.Run(arbIn, arbOut)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to Run on Infer command")
+			}
+			for _, out := range arbOut {
+				if o, ok := out.(*ort.Tensor[uint8]); ok {
+					outputs = append(outputs, o)
+				} else {
+					return nil, errors.New("could not convert output tensor from Run to float32")
+				}
 			}
 			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -180,7 +198,7 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 		}
 	case ort.TensorElementDataTypeUint8:
 		inputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.InputInfo))
-		err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
+		inputs, err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -188,10 +206,17 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 		case ort.TensorElementDataTypeFloat:
 			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
 			arbIn := toArbitraryTensor(inputs)
-			arbOut := toArbitraryTensor(outputs)
+			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
 			err = ocpu.session.Session.Run(arbIn, arbOut)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to Run on Infer command")
+			}
+			for _, out := range arbOut {
+				if o, ok := out.(*ort.Tensor[float32]); ok {
+					outputs = append(outputs, o)
+				} else {
+					return nil, errors.New("could not convert output tensor from Run to float32")
+				}
 			}
 			err := onnxTensorsToMlTensors[float32](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -200,10 +225,17 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 		case ort.TensorElementDataTypeUint8:
 			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
 			arbIn := toArbitraryTensor(inputs)
-			arbOut := toArbitraryTensor(outputs)
+			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
 			err = ocpu.session.Session.Run(arbIn, arbOut)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "failed to Run on Infer command")
+			}
+			for _, out := range arbOut {
+				if o, ok := out.(*ort.Tensor[uint8]); ok {
+					outputs = append(outputs, o)
+				} else {
+					return nil, errors.New("could not convert output tensor from Run to uint8")
+				}
 			}
 			err := onnxTensorsToMlTensors[uint8](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -227,31 +259,35 @@ func toArbitraryTensor[T ort.TensorData](in []*ort.Tensor[T]) []ort.ArbitraryTen
 }
 
 // copy the data into the input tensors
-func mlTensorsToOnnxTensors[T ort.TensorData](tensors ml.Tensors, inputs []*ort.Tensor[T], info []ort.InputOutputInfo) error {
+func mlTensorsToOnnxTensors[T ort.TensorData](tensors ml.Tensors, inputs []*ort.Tensor[T], info []ort.InputOutputInfo) ([]*ort.Tensor[T], error) {
 	// order is given by InputInfo array. The names must match
 	for _, inf := range info {
 		denseTensor, found := tensors[inf.Name]
 		if !found {
-			return errors.Errorf("input tensor with name %q is required", inf.Name)
+			return nil, errors.Errorf("input tensor with name %q is required", inf.Name)
 		}
 		typedDenseData, ok := denseTensor.Data().([]T)
 		if !ok {
-			return errors.Errorf("input tensor %s is of type %v, not %s", inf.Name, denseTensor.Dtype(), inf.DataType.String())
+			return nil, errors.Errorf("input tensor %s is of type %v, not %s", inf.Name, denseTensor.Dtype(), inf.DataType.String())
 		}
-		input, err := ort.NewTensor(inf.Dimensions, typedDenseData)
+		shape := ort.Shape{}
+		for _, s := range denseTensor.Shape() {
+			shape = append(shape, int64(s))
+		}
+		input, err := ort.NewTensor(shape, typedDenseData)
 		if err != nil {
-			return errors.Wrapf(err, "input tensor %s encountered an error", inf.Name)
+			return nil, errors.Wrapf(err, "input tensor %s encountered an error", inf.Name)
 		}
 		inputs = append(inputs, input)
 	}
-	return nil
+	return inputs, nil
 }
 
 func onnxTensorsToMlTensors[T ort.TensorData](outputs []*ort.Tensor[T], tensors ml.Tensors, info []ort.InputOutputInfo) error {
 	for i, inf := range info {
 		t := outputs[i]
-		shape := make([]int, 0, len(inf.Dimensions))
-		for _, d := range inf.Dimensions {
+		shape := make([]int, 0, len(t.GetShape()))
+		for _, d := range t.GetShape() {
 			shape = append(shape, int(d))
 		}
 		tensors[inf.Name] = tensor.New(
