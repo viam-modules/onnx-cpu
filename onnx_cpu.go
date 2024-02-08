@@ -3,6 +3,7 @@ package onnx_cpu
 import (
 	"context"
 	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 	ort "github.com/yalue/onnxruntime_go"
@@ -10,6 +11,7 @@ import (
 	"go.viam.com/rdk/ml"
 	"go.viam.com/rdk/resource"
 	"go.viam.com/rdk/services/mlmodel"
+	"go.viam.com/utils"
 	"gorgonia.org/tensor"
 )
 
@@ -32,12 +34,12 @@ func init() {
 }
 
 type Config struct {
-	modelPath string `json:"model_path"`
+	ModelPath string `json:"model_path"`
 }
 
 func (cfg *Config) Validate(path string) ([]string, error) {
-	if cfg.modelPath == "" {
-		return nil, errors.New("config attribute 'model_path' must point to a onnx model file")
+	if cfg.ModelPath == "" {
+		return nil, utils.NewConfigValidationFieldRequiredError(path, "model_path")
 	}
 	return nil, nil
 }
@@ -70,7 +72,7 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 		return nil, err
 	}
 	// get the input and output tensor info
-	inputInfo, outputInfo, err := ort.GetInputOutputInfo(cfg.modelPath)
+	inputInfo, outputInfo, err := ort.GetInputOutputInfo(cfg.ModelPath)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +115,7 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 	if err != nil {
 		return nil, err
 	}
-	session, err := ort.NewDynamicAdvancedSession(cfg.modelPath,
+	session, err := ort.NewDynamicAdvancedSession(cfg.ModelPath,
 		inputNames, outputNames, options,
 	)
 	if err != nil {
@@ -332,6 +334,13 @@ func getSharedLibPath() (string, error) {
 			return "./third_party/onnxruntime_arm64.so", nil
 		}
 		return "./third_party/onnxruntime.so", nil
+	}
+	switch arch := strings.Join([]string{runtime.GOOS, runtime.GOARCH}, "-"); arch {
+	case "android-386":
+		return "./third_party/onnx-android-x86.so", nil
+	case "android-arm64":
+		return "./third_party/onnx-android-arm64-v8a.so", nil
+
 	}
 	return "", errors.Errorf("Unable to find a version of the onnxruntime library supporting %s %s", runtime.GOOS, runtime.GOARCH)
 }
