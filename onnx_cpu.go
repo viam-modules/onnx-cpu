@@ -160,10 +160,6 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
 			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
-			for _ = range ocpu.session.OutputInfo {
-				o := new(ort.Tensor[float32])
-				outputs = append(outputs, o)
-			}
 			arbIn := toArbitraryTensor(inputs)
 			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
 			err = ocpu.session.Session.Run(arbIn, arbOut)
