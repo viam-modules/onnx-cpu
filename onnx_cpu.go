@@ -40,6 +40,7 @@ func init() {
 
 type Config struct {
 	ModelPath string `json:"model_path"`
+	LabelPath string `json:"label_path"`
 }
 
 func (cfg *Config) Validate(path string) ([]string, error) {
@@ -82,7 +83,7 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 		return nil, err
 	}
 	// create the metadata
-	ocpu.metadata = createMetadata(inputInfo, outputInfo)
+	ocpu.metadata = createMetadata(inputInfo, outputInfo, cfg.LabelPath)
 	// create the inputs and outputs
 	// input
 	inputNames := make([]string, 0, len(inputInfo))
@@ -149,50 +150,43 @@ func (ocpu *onnxCPU) DoCommand(ctx context.Context, cmd map[string]interface{}) 
 
 func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors, error) {
 	outTensors := ml.Tensors{}
+	lenInputs := len(ocpu.session.InputInfo)
+	lenOutputs := len(ocpu.session.OutputInfo)
 	// TODO: make this less bad, is it really only possible by doing a type switch?
 	switch ocpu.session.InputType {
 	case ort.TensorElementDataTypeFloat:
-		inputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.InputInfo))
+		inputs := make([]*ort.Tensor[float32], 0, lenInputs)
 		inputs, err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
 		if err != nil {
 			return nil, err
 		}
+		defer func() {
+			utils.UncheckedError(destroyTensors(inputs))
+		}()
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
-			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
-			arbIn := toArbitraryTensor(inputs)
-			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
-			err = ocpu.session.Session.Run(arbIn, arbOut)
+			outputs := make([]*ort.Tensor[float32], 0, lenOutputs)
+			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to Run on Infer command")
+				return nil, err
 			}
-			for _, out := range arbOut {
-				if o, ok := out.(*ort.Tensor[float32]); ok {
-					outputs = append(outputs, o)
-				} else {
-					return nil, errors.New("could not convert output tensor from Run to float32")
-				}
-			}
-			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
+			defer func() {
+				utils.UncheckedError(destroyTensors(outputs))
+			}()
+			err = onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
 				return nil, err
 			}
 		case ort.TensorElementDataTypeUint8:
-			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
-			arbIn := toArbitraryTensor(inputs)
-			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
-			err = ocpu.session.Session.Run(arbIn, arbOut)
+			outputs := make([]*ort.Tensor[uint8], 0, lenOutputs)
+			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to Run on Infer command")
+				return nil, err
 			}
-			for _, out := range arbOut {
-				if o, ok := out.(*ort.Tensor[uint8]); ok {
-					outputs = append(outputs, o)
-				} else {
-					return nil, errors.New("could not convert output tensor from Run to float32")
-				}
-			}
-			err := onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
+			defer func() {
+				utils.UncheckedError(destroyTensors(outputs))
+			}()
+			err = onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
 				return nil, err
 			}
@@ -200,47 +194,38 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 			return nil, errors.Errorf("output tensor type %s not implemented", ocpu.session.OutputType.String())
 		}
 	case ort.TensorElementDataTypeUint8:
-		inputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.InputInfo))
+		inputs := make([]*ort.Tensor[uint8], 0, lenOutputs)
 		inputs, err := mlTensorsToOnnxTensors(tensors, inputs, ocpu.session.InputInfo)
 		if err != nil {
 			return nil, err
 		}
+		defer func() {
+			utils.UncheckedError(destroyTensors(inputs))
+		}()
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
-			outputs := make([]*ort.Tensor[float32], 0, len(ocpu.session.OutputInfo))
-			arbIn := toArbitraryTensor(inputs)
-			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
-			err = ocpu.session.Session.Run(arbIn, arbOut)
+			outputs := make([]*ort.Tensor[float32], 0, lenOutputs)
+			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to Run on Infer command")
+				return nil, err
 			}
-			for _, out := range arbOut {
-				if o, ok := out.(*ort.Tensor[float32]); ok {
-					outputs = append(outputs, o)
-				} else {
-					return nil, errors.New("could not convert output tensor from Run to float32")
-				}
-			}
-			err := onnxTensorsToMlTensors[float32](outputs, outTensors, ocpu.session.OutputInfo)
+			defer func() {
+				utils.UncheckedError(destroyTensors(outputs))
+			}()
+			err = onnxTensorsToMlTensors[float32](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
 				return nil, err
 			}
 		case ort.TensorElementDataTypeUint8:
-			outputs := make([]*ort.Tensor[uint8], 0, len(ocpu.session.OutputInfo))
-			arbIn := toArbitraryTensor(inputs)
-			arbOut := make([]ort.ArbitraryTensor, len(ocpu.session.OutputInfo))
-			err = ocpu.session.Session.Run(arbIn, arbOut)
+			outputs := make([]*ort.Tensor[uint8], 0, lenOutputs)
+			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to Run on Infer command")
+				return nil, err
 			}
-			for _, out := range arbOut {
-				if o, ok := out.(*ort.Tensor[uint8]); ok {
-					outputs = append(outputs, o)
-				} else {
-					return nil, errors.New("could not convert output tensor from Run to uint8")
-				}
-			}
-			err := onnxTensorsToMlTensors[uint8](outputs, outTensors, ocpu.session.OutputInfo)
+			defer func() {
+				utils.UncheckedError(destroyTensors(outputs))
+			}()
+			err = onnxTensorsToMlTensors[uint8](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
 				return nil, err
 			}
@@ -253,12 +238,39 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 	return outTensors, nil
 }
 
+func runModel[M, N ort.TensorData](session *ort.DynamicAdvancedSession, outputLen int, inputs []*ort.Tensor[M], outputs []*ort.Tensor[N]) ([]*ort.Tensor[N], error) {
+	arbIn := toArbitraryTensor(inputs)
+	arbOut := make([]ort.ArbitraryTensor, outputLen)
+	err := session.Run(arbIn, arbOut)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to Run on Infer command")
+	}
+	for _, out := range arbOut {
+		o, ok := out.(*ort.Tensor[N])
+		if !ok {
+			return nil, errors.Errorf("could not convert output tensor from Run to type %T", o)
+		}
+		outputs = append(outputs, o)
+	}
+	return outputs, nil
+}
+
 func toArbitraryTensor[T ort.TensorData](in []*ort.Tensor[T]) []ort.ArbitraryTensor {
 	out := make([]ort.ArbitraryTensor, 0, len(in))
 	for _, t := range in {
 		out = append(out, t)
 	}
 	return out
+}
+
+func destroyTensors[T ort.TensorData](toDestroy []*ort.Tensor[T]) error {
+	for _, t := range toDestroy {
+		err := t.Destroy()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // copy the data into the input tensors
@@ -320,33 +332,24 @@ func (ocpu *onnxCPU) Close(ctx context.Context) error {
 }
 
 func getSharedLibPath() (string, error) {
-	if runtime.GOOS == "windows" {
-		if runtime.GOARCH == "amd64" {
-			return "./third_party/onnxruntime.dll", nil
-		}
-	}
-	if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
-			return "./third_party/onnxruntime_arm64.dylib", nil
-		}
-	}
-	if runtime.GOOS == "linux" {
-		if runtime.GOARCH == "arm64" {
-			return "./third_party/onnxruntime_arm64.so", nil
-		}
-		return "./third_party/onnxruntime.so", nil
-	}
 	switch arch := strings.Join([]string{runtime.GOOS, runtime.GOARCH}, "-"); arch {
+	case "windows-amd64":
+		return "./third_party/onnxruntime.dll", nil
+	case "darwin-arm64":
+		return "./third_party/onnxruntime_arm64.dylib", nil
+	case "linux-arm64":
+		return "./third_party/onnxruntime_arm64.so", nil
+	case "linux-amd64":
+		return "./third_party/onnxruntime.so", nil
 	case "android-386":
 		return "./third_party/onnx-android-x86.so", nil
 	case "android-arm64":
 		return "./third_party/onnx-android-arm64-v8a.so", nil
-
 	}
 	return "", errors.Errorf("Unable to find a version of the onnxruntime library supporting %s %s", runtime.GOOS, runtime.GOARCH)
 }
 
-func createMetadata(inputInfo, outputInfo []ort.InputOutputInfo) mlmodel.MLMetadata {
+func createMetadata(inputInfo, outputInfo []ort.InputOutputInfo, labelPath string) mlmodel.MLMetadata {
 	md := mlmodel.MLMetadata{}
 	md.ModelName = "onnx_model"
 	// inputs
@@ -373,10 +376,13 @@ func createMetadata(inputInfo, outputInfo []ort.InputOutputInfo) mlmodel.MLMetad
 		if dataTypeString, ok := DataTypeMap[out.DataType]; ok {
 			dataType = dataTypeString
 		}
+		extra := map[string]interface{}{}
+		extra["labels"] = labelPath // put label path info in the Extra field
 		info := mlmodel.TensorInfo{
 			Name:     out.Name,
 			DataType: dataType,
 			Shape:    shape,
+			Extra:    extra,
 		}
 		outputs = append(outputs, info)
 	}

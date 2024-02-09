@@ -17,7 +17,7 @@ import (
 func TestImageClassification(t *testing.T) {
 	logger := logging.NewTestLogger(t)
 	name := resource.NewName(mlmodel.API, "test_model")
-	cfg := &Config{"./test_files/age_googlenet.onnx"}
+	cfg := &Config{"./test_files/age_googlenet.onnx", ""}
 	theModel, err := initModel(name, cfg, logger)
 	test.That(t, err, test.ShouldBeNil)
 
@@ -29,6 +29,7 @@ func TestImageClassification(t *testing.T) {
 	test.That(t, len(md.Outputs), test.ShouldEqual, 1)
 	test.That(t, md.Inputs[0].Shape, test.ShouldResemble, []int{1, 3, 224, 224})
 	test.That(t, md.Outputs[0].Shape, test.ShouldResemble, []int{1, 8})
+	test.That(t, md.Outputs[0].Extra, test.ShouldContainKey, "labels")
 
 	// check infer with a test image
 	img, err := rimage.NewImageFromFile("./test_files/person2.jpeg")
@@ -64,7 +65,7 @@ func TestImageClassification(t *testing.T) {
 func TestImageDetection(t *testing.T) {
 	logger := logging.NewTestLogger(t)
 	name := resource.NewName(mlmodel.API, "test_model")
-	cfg := &Config{"./test_files/ir_mobilenet.onnx"}
+	cfg := &Config{"./test_files/ir_mobilenet.onnx", "/path/to/labels.txt"}
 	theModel, err := initModel(name, cfg, logger)
 	test.That(t, err, test.ShouldBeNil)
 
@@ -74,6 +75,7 @@ func TestImageDetection(t *testing.T) {
 	test.That(t, md.ModelName, test.ShouldEqual, "onnx_model")
 	test.That(t, len(md.Inputs), test.ShouldEqual, 1)
 	test.That(t, len(md.Outputs), test.ShouldEqual, 8)
+	test.That(t, md.Outputs[0].Extra, test.ShouldContainKey, "labels")
 
 	// check infer with a test image
 	img, err := rimage.NewImageFromFile("./test_files/person.jpeg")
