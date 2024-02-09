@@ -1,3 +1,4 @@
+// package onnx_cpu is mlmodel service module that can run ONNX files on the CPU using an external runtime environment.
 package onnx_cpu
 
 import (
@@ -15,8 +16,10 @@ import (
 	"gorgonia.org/tensor"
 )
 
+// Model is the name of the module
 var Model = resource.ModelNamespace("viam-labs").WithFamily("mlmodel").WithModel("onnx-cpu")
 
+// DataTypeMap maps the long ONNX data type labels to the data type as written in Go.
 var DataTypeMap = map[ort.TensorElementDataType]string{
 	ort.TensorElementDataTypeFloat: "float32",
 	ort.TensorElementDataTypeUint8: "uint8",
@@ -38,11 +41,13 @@ func init() {
 	})
 }
 
+// Config only needs the path to the .onnx file as well as an optional path to the file of labels.
 type Config struct {
 	ModelPath string `json:"model_path"`
 	LabelPath string `json:"label_path"`
 }
 
+// Validate makes sure that the required model path is not empty
 func (cfg *Config) Validate(path string) ([]string, error) {
 	if cfg.ModelPath == "" {
 		return nil, utils.NewConfigValidationFieldRequiredError(path, "model_path")
@@ -50,6 +55,8 @@ func (cfg *Config) Validate(path string) ([]string, error) {
 	return nil, nil
 }
 
+// modelSession stores all the relevant info needed for running the ONNX model.
+// Currently this module limits the input and output tensors to be of type uint8 and/or float32.
 type modelSession struct {
 	Session    *ort.DynamicAdvancedSession
 	InputInfo  []ort.InputOutputInfo
@@ -58,6 +65,7 @@ type modelSession struct {
 	OutputType ort.TensorElementDataType
 }
 
+// onnxCPU is the struct that fulfills the interface for an ML Model Service.
 type onnxCPU struct {
 	resource.AlwaysRebuild
 	name     resource.Name
@@ -66,6 +74,8 @@ type onnxCPU struct {
 	metadata mlmodel.MLMetadata
 }
 
+// initModel will check to see if the inputs and outputs of the onnx model are valid, creates
+// the metadata structure, and also starts the model session.
 func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU, error) {
 	ocpu := &onnxCPU{name: name, logger: logger}
 	libPath, err := getSharedLibPath()
@@ -77,15 +87,16 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 	if err != nil {
 		return nil, err
 	}
-	// get the input and output tensor info
+	// get the input and output tensor info from the ONNX model
 	inputInfo, outputInfo, err := ort.GetInputOutputInfo(cfg.ModelPath)
 	if err != nil {
 		return nil, err
 	}
-	// create the metadata
+
+	// create the metadata and store the label path in the metadata if it was provided
 	ocpu.metadata = createMetadata(inputInfo, outputInfo, cfg.LabelPath)
-	// create the inputs and outputs
-	// input
+
+	// create the session object
 	inputNames := make([]string, 0, len(inputInfo))
 	var inputType ort.TensorElementDataType
 	if len(inputInfo) != 0 {
@@ -100,7 +111,6 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 		}
 		inputNames = append(inputNames, in.Name)
 	}
-	// output
 	outputNames := make([]string, 0, len(outputInfo))
 	var outputType ort.TensorElementDataType
 	outputType = ort.TensorElementDataTypeUndefined
@@ -116,7 +126,6 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 		}
 		outputNames = append(outputNames, out.Name)
 	}
-	// create the session
 	options, err := ort.NewSessionOptions()
 	if err != nil {
 		return nil, err
@@ -140,19 +149,31 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 	return ocpu, nil
 }
 
+// Name returns the name of the service.
 func (ocpu *onnxCPU) Name() resource.Name {
 	return ocpu.name
 }
 
+// DoCommand is unimplemented for this service.
 func (ocpu *onnxCPU) DoCommand(ctx context.Context, cmd map[string]interface{}) (map[string]interface{}, error) {
 	return nil, resource.ErrDoUnimplemented
 }
 
+// Metadata holds important info about the model, such as the name, shape, and data type of
+// its input and output tensors.
+func (ocpu *onnxCPU) Metadata(ctx context.Context) (mlmodel.MLMetadata, error) {
+	return ocpu.metadata, nil
+}
+
+// Infer is where everything happens. The input data is loaded from grpc into the tensor objects,
+// The model is run on the inputs to produce the output tensors,
+// And the output tensors from the model are converted into protobuf compatible structs.
 func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors, error) {
 	outTensors := ml.Tensors{}
 	lenInputs := len(ocpu.session.InputInfo)
 	lenOutputs := len(ocpu.session.OutputInfo)
-	// TODO: make this less bad, is it really only possible by doing a type switch?
+	// TODO: make this less bad, essentially have to create a case for every data type combo
+	// Does the static typing really make this the only possible solution?
 	switch ocpu.session.InputType {
 	case ort.TensorElementDataTypeFloat:
 		inputs := make([]*ort.Tensor[float32], 0, lenInputs)
@@ -273,7 +294,7 @@ func destroyTensors[T ort.TensorData](toDestroy []*ort.Tensor[T]) error {
 	return nil
 }
 
-// copy the data into the input tensors
+// copy the data into the onnx runtime tensors
 func mlTensorsToOnnxTensors[T ort.TensorData](tensors ml.Tensors, inputs []*ort.Tensor[T], info []ort.InputOutputInfo) ([]*ort.Tensor[T], error) {
 	// order is given by InputInfo array. The names must match
 	for _, inf := range info {
@@ -298,6 +319,7 @@ func mlTensorsToOnnxTensors[T ort.TensorData](tensors ml.Tensors, inputs []*ort.
 	return inputs, nil
 }
 
+// copy the data into the protobuf compatible tensors
 func onnxTensorsToMlTensors[T ort.TensorData](outputs []*ort.Tensor[T], tensors ml.Tensors, info []ort.InputOutputInfo) error {
 	for i, inf := range info {
 		t := outputs[i]
@@ -311,10 +333,6 @@ func onnxTensorsToMlTensors[T ort.TensorData](outputs []*ort.Tensor[T], tensors 
 		)
 	}
 	return nil
-}
-
-func (ocpu *onnxCPU) Metadata(ctx context.Context) (mlmodel.MLMetadata, error) {
-	return ocpu.metadata, nil
 }
 
 func (ocpu *onnxCPU) Close(ctx context.Context) error {
