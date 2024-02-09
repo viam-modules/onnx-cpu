@@ -7,7 +7,7 @@ if you need to package it up in a module, do the following
 ```
 go build -o module cmd/module/main.go
 chmod a+x module
-tar -czf module.tar.gz module third_party/ ir_mobilenet.onnx
+tar -czf module.tar.gz module third_party/
 ```
 
 `third_party` contains all of the `.so` files for the ONNX runntime. You can package only the one you need.
