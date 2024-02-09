@@ -33,7 +33,7 @@ There is only one attribute you need for onnx-cpu, `model_path`, the full path t
 
 ## Use it with a vision service
 
-You will most likely need to rename the input and outputs tensors coming from the ONNX file. There is a new attribute on the mlmodel vision service that allows you do that. You have to go to `RAW JSON` to actually be able to input the remapping, though
+You will most likely need to rename the input and outputs tensors coming from the ONNX file. There is a new attribute on the mlmodel vision service that allows you do that [RSDK-6618](https://github.com/viamrobotics/rdk/pull/3565). You have to go to `RAW JSON` to actually be able to input the remapping, though
 
 ```
    {
