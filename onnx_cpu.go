@@ -17,6 +17,11 @@ import (
 
 var Model = resource.ModelNamespace("viam-labs").WithFamily("mlmodel").WithModel("onnx-cpu")
 
+var DataTypeMap = map[ort.TensorElementDataType]string{
+	ort.TensorElementDataTypeFloat: "float32",
+	ort.TensorElementDataTypeUint8: "uint8",
+}
+
 func init() {
 	resource.RegisterService(mlmodel.API, Model, resource.Registration[mlmodel.Service, *Config]{
 		Constructor: func(ctx context.Context, deps resource.Dependencies, conf resource.Config, logger logging.Logger) (mlmodel.Service, error) {
@@ -352,9 +357,13 @@ func createMetadata(inputInfo, outputInfo []ort.InputOutputInfo) mlmodel.MLMetad
 	inputs := []mlmodel.TensorInfo{}
 	for _, in := range inputInfo {
 		shape := convertInt64SliceToInt(in.Dimensions)
+		dataType := in.DataType.String()
+		if dataTypeString, ok := DataTypeMap[in.DataType]; ok {
+			dataType = dataTypeString
+		}
 		info := mlmodel.TensorInfo{
 			Name:     in.Name,
-			DataType: in.DataType.String(),
+			DataType: dataType,
 			Shape:    shape,
 		}
 		inputs = append(inputs, info)
@@ -364,9 +373,13 @@ func createMetadata(inputInfo, outputInfo []ort.InputOutputInfo) mlmodel.MLMetad
 	outputs := []mlmodel.TensorInfo{}
 	for _, out := range outputInfo {
 		shape := convertInt64SliceToInt(out.Dimensions)
+		dataType := out.DataType.String()
+		if dataTypeString, ok := DataTypeMap[out.DataType]; ok {
+			dataType = dataTypeString
+		}
 		info := mlmodel.TensorInfo{
 			Name:     out.Name,
-			DataType: out.DataType.String(),
+			DataType: dataType,
 			Shape:    shape,
 		}
 		outputs = append(outputs, info)
