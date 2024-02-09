@@ -14,7 +14,7 @@ tar -czf module.tar.gz module third_party/
 
 For Android, the Makefile will create the tar file.
 
-You can then locally run the module. the triplet is `viam-labs:mlmodel:onnx-cpu`
+You can then add the module to app.viam.com locally. the triplet is `viam-labs:mlmodel:onnx-cpu`
 
 ## Config
 
