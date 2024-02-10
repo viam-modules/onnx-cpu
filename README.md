@@ -18,7 +18,8 @@ You can then add the module to app.viam.com locally. the triplet is `viam-labs:m
 
 ## Config
 
-There is only one attribute you need for onnx-cpu, `model_path`, the full path to the ONNX file.
+- `model_path`, the full path to the ONNX file.
+- `label_path` (optional), the full path to the names of the category labels.
 
 ```
     {
@@ -27,6 +28,7 @@ There is only one attribute you need for onnx-cpu, `model_path`, the full path t
       "model": "viam-labs:mlmodel:onnx-cpu",
       "attributes": {
         "model_path": "/path/to/onnx_file/detector_googlenet.onnx"
+        "label_path": "/path/to/labels.txt
       }
     }
 ```
