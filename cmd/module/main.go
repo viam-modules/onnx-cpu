@@ -4,6 +4,7 @@ import (
 	"context"
 
 	onnx "github.com/viam-labs/onnx-cpu"
+	ort "github.com/yalue/onnxruntime_go"
 	"go.viam.com/rdk/logging"
 	"go.viam.com/rdk/module"
 	"go.viam.com/rdk/services/mlmodel"
@@ -35,6 +36,18 @@ func realMain() error {
 	if err != nil {
 		return err
 	}
+	defer onnxClose(ctx)
 	<-ctx.Done()
+	return nil
+}
+
+func onnxClose(ctc context.Context) error {
+	// destroy environment
+	if ort.IsInitialized() {
+		err := ort.DestroyEnvironment()
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }

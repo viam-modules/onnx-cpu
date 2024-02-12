@@ -343,11 +343,6 @@ func (ocpu *onnxCPU) Close(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// destroy environment
-	err = ort.DestroyEnvironment()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
