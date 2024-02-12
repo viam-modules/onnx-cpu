@@ -83,9 +83,11 @@ func initModel(name resource.Name, cfg *Config, logger logging.Logger) (*onnxCPU
 		return nil, err
 	}
 	ort.SetSharedLibraryPath(libPath)
-	err = ort.InitializeEnvironment()
-	if err != nil {
-		return nil, err
+	if !ort.IsInitialized() {
+		err = ort.InitializeEnvironment()
+		if err != nil {
+			return nil, err
+		}
 	}
 	// get the input and output tensor info from the ONNX model
 	inputInfo, outputInfo, err := ort.GetInputOutputInfo(cfg.ModelPath)
