@@ -1,0 +1,17 @@
+{
+  "module_id": "viam-labs:onnx-cpu",
+  "build": {
+      "build": "make module.tar.gz",
+      "arch" : ["linux/amd64", "linux/arm64", "darwin/arm64"]
+  },
+  "visibility": "public",
+  "url": "https://github.com/viam-labs/onnx-cpu",
+  "description": "An ML Model Service that is used to run ONNX files. Comes with an embedded onnx runtime.",
+  "models": [
+    {
+      "api": "rdk:service:mlmodel",
+      "model": "viam-labs:mlmodel:onnx-cpu"
+    }
+  ],
+  "entrypoint": "module"
+}
