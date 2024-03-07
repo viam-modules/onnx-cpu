@@ -1,6 +1,6 @@
 # `onnx-cpu` modular resource
 
-This module allows you to run ONNX models with the Viam Vision Service on Android.
+This module allows you to run ONNX models with the Viam `mlmodel` vision service on Android.
 
 ## Requirements
 
