@@ -10,7 +10,7 @@ Before configuring your ML model, you must [create a machine](https://docs.viam.
 
 To use this module, follow these instructions to [add a module from the Viam Registry](https://docs.viam.com/registry/configure/#add-a-modular-resource-from-the-viam-registry) and select the `viam-labs:mlmodel:onnx-cpu` model from the [`onnx-cpu` module](https://github.com/viam-labs/onnx-cpu).
 
-## Configure your `onnx-cpu` sensor
+## Configure your `onnx-cpu` ML model
 
 Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
 Click on the **Services** subtab and click **Create service**.
