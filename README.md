@@ -31,7 +31,7 @@ On the new component panel, copy and paste the following attribute template into
 
 ### Attributes
 
-The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` sensor:
+The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML model service:
 
 | Name    | Type   | Inclusion    | Description |
 | ------- | ------ | ------------ | ----------- |
