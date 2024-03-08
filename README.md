@@ -54,7 +54,7 @@ The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML m
 
 ### Configure a vision service
 
-The module allows you deploy an ONNX ML model with the ML model service it provides. Viam's vision service allows you to make use of the deployed detection or classification model.
+The module allows you to deploy an ONNX ML model with the ML model service it provides. Viam's vision service allows you to make use of the deployed detection or classification model.
 
 Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
 Click on the **Services** subtab and click **Create service**.
