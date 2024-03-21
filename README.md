@@ -14,15 +14,18 @@ To use this module, follow these instructions to [add a module from the Viam Reg
 
 Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
 Click on the **Services** subtab and click **Create service**.
-Select the `mlmodel` type, then select the `onnx-cpu:timesyncsensor` model.
+Select the `mlmodel` type, then select the `mlmodel:onnx-cpu` model.
 Click **Add module**, then enter a name for your ML model and click **Create**.
 
-On the new component panel, copy and paste the following attribute template into your ML model’s **Attributes** box:
+On the new component panel, deploy a model on to your machine by selecting an onnx model from the **Model** dropdown or by specifying a path to an existing model on your machine.
+
+If you prefer to configure your service using JSON, use the following attributes **attributes**:
 
 ```json
 {
   "model_path": "/path/to/onnx_file/detector_googlenet.onnx",
-  "label_path": "/path/to/labels.txt"
+  "label_path": "/path/to/labels.txt",
+  "num_threads": 1
 }
 ```
 
@@ -37,6 +40,7 @@ The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML m
 | ------- | ------ | ------------ | ----------- |
 | `model_path` | string | **Required** | The full path to the ONNX file. |
 | `label_path` | string | Optional | The full path to the names of the category labels. |
+| `num_threads` | int | Optional | The number of threads. |
 
 ### Example configuration
 
@@ -103,7 +107,7 @@ chmod a+x module
 tar -czf module.tar.gz module third_party/
 ```
 
-`third_party` contains all of the `.so` files for the ONNX runntime. You can package only the one you need.
+`third_party` contains all of the `.so` files for the ONNX runtime. You can package only the one you need.
 
 For Android, the Makefile will create the tar file.
 
