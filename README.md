@@ -25,7 +25,7 @@ If you prefer to configure your service using JSON, use the following attributes
 {
   "model_path": "/path/to/onnx_file/detector_googlenet.onnx",
   "label_path": "/path/to/labels.txt",
-  "num_threads": 1
+  "num_threads": 1,
   "package_reference": "viam-soleng/face-detector-onnx"
 }
 ```
