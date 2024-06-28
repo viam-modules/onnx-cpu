@@ -55,3 +55,7 @@ third_party/onnx-android-$(SO_ARCH).so: onnxruntime-android-$(ONNX_VERSION).aar
 
 bundle-droid-$(SO_ARCH).tar.gz: module third_party/onnx-android-$(SO_ARCH).so
 	tar -czf $@ $^
+test:
+	go test
+lint:
+	golangci-lint run --disable errcheck
