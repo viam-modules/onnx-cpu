@@ -3,6 +3,7 @@ MOD_OS := $(shell uname -s)
 test:
 	go test
 lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.43.0
 	golangci-lint run --disable errcheck onnx_cpu.go
 module.tar.gz:
 ifeq ($(MOD_OS),Darwin)
