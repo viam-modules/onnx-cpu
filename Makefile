@@ -1,6 +1,9 @@
 MOD_ARCH := $(shell uname -m)
 MOD_OS := $(shell uname -s)
-
+test:
+	go test
+lint:
+	golangci-lint run --disable errcheck onnx_cpu.go
 module.tar.gz:
 ifeq ($(MOD_OS),Darwin)
 ifeq ($(MOD_ARCH),x86_64)
@@ -31,7 +34,7 @@ module: TARGET_API ?= android28
 module: ONNX_VERSION ?= 1.16.1
 module: SO_ARCH ?= arm64-v8a
 module: CGO_ENABLED := 1
-module: CC := $(shell realpath $(NDK_ROOT)/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android30-clang)
+module: CC := $(NDK_ROOT)/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android30-clang
 module: CGO_CFLAGS := -I$(NDK_ROOT)/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/include \
 							-I$(NDK_ROOT)/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/include/aarch64-linux-android
 module: CGO_LDFLAGS := -L$(NDK_ROOT)/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib
@@ -55,7 +58,3 @@ third_party/onnx-android-$(SO_ARCH).so: onnxruntime-android-$(ONNX_VERSION).aar
 
 bundle-droid-$(SO_ARCH).tar.gz: module third_party/onnx-android-$(SO_ARCH).so
 	tar -czf $@ $^
-test:
-	go test
-lint:
-	golangci-lint run --disable errcheck
