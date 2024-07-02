@@ -19,6 +19,9 @@ ifeq ($(MOD_ARCH),x86_64)
 else ifeq ($(MOD_ARCH),arm64)
 	go build -a -o module ./cmd/module
 	tar -czf $@ module third_party/onnxruntime_arm64.so
+else ifeq ($(MOD_ARCH),aarch64)
+	go build -a -o module ./cmd/module
+	tar -czf $@ module third_party/onnxruntime_arm64.so
 endif
 else
 	@echo "Unsupported OS: $(MOD_OS) or architecture: $(MOD_ARCH)"
