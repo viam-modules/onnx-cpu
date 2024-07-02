@@ -1,0 +1,21 @@
+name: Run lint & unit tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: "Run unit tests"
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run unit tests
+      run: make test
