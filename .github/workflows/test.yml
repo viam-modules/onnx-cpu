@@ -13,9 +13,17 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-
+    - uses: actions/setup-go@v5
+      with:
+        go-version: stable
     - name: Install dependencies
       run: go mod download
 
     - name: Run unit tests
       run: make test
+
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v6
+      with:
+        version: v1.59
+        args: --disable errcheck --timeout 10m
