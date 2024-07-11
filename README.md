@@ -42,7 +42,7 @@ The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML m
 | `model_path` | string | **Required** | The full path to the ONNX file. |
 | `label_path` | string | Optional | The full path to the names of the category labels. |
 | `num_threads` | int | Optional | The number of threads. Must be 1. |
-| `package_reference` | string | Optional | The package of the model to deply. For example: "viam-soleng/face-detector-onnx". |
+| `package_reference` | string | Optional | The package of the model to deploy if the model was deployed through the registry. For example: "viam-soleng/face-detector-onnx". |
 
 
 ### Example configuration
