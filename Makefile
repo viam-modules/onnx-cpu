@@ -3,7 +3,7 @@ MOD_OS := $(shell uname -s)
 test:
 	go test
 lint:
-	golangci-lint run --disable errcheck
+	golangci-lint run
 module.tar.gz:
 ifeq ($(MOD_OS),Darwin)
 ifeq ($(MOD_ARCH),x86_64)
