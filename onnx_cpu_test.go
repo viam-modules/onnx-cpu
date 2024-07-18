@@ -110,3 +110,22 @@ func TestImageDetection(t *testing.T) {
 	err = theModel.Close(context.Background())
 	test.That(t, err, test.ShouldBeNil)
 }
+
+func TestValidate(t *testing.T) {
+	// correct
+	cfg := &Config{"./test_files/ir_mobilenet.onnx", "/path/to/labels.txt"}
+	deps, err := cfg.Validate("")
+	test.That(t, err, test.ShouldBeNil)
+	test.That(t, deps, test.ShouldBeNil)
+	// empty
+	cfg = &Config{"", "/path/to/labels.txt"}
+	_, err = cfg.Validate("")
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, err.Error(), test.ShouldContainSubstring, "model_path")
+	// incorrect
+	cfg = &Config{"/path/to/other_model.tflite", "/path/to/labels.txt"}
+	_, err = cfg.Validate("")
+	test.That(t, err, test.ShouldNotBeNil)
+	test.That(t, err.Error(), test.ShouldContainSubstring, "must end in .onnx")
+
+}

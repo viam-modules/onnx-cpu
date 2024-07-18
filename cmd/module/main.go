@@ -36,7 +36,7 @@ func realMain() error {
 	if err != nil {
 		return err
 	}
-	defer onnxClose(ctx)
+	defer onnxClose(ctx) //nolint:errcheck
 	<-ctx.Done()
 	return nil
 }
