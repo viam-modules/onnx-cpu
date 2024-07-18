@@ -3,6 +3,7 @@ package onnx_cpu
 
 import (
 	"context"
+	"path"
 	"runtime"
 	"strings"
 
@@ -48,9 +49,14 @@ type Config struct {
 }
 
 // Validate makes sure that the required model path is not empty
-func (cfg *Config) Validate(path string) ([]string, error) {
+func (cfg *Config) Validate(validatePath string) ([]string, error) {
 	if cfg.ModelPath == "" {
-		return nil, utils.NewConfigValidationFieldRequiredError(path, "model_path")
+		return nil, utils.NewConfigValidationFieldRequiredError(validatePath, "model_path")
+	}
+	ext := path.Ext(cfg.ModelPath)
+	if ext != ".onnx" {
+		base := path.Base(cfg.ModelPath)
+		return nil, errors.Errorf("model_path filename must end in .onnx. The filename is %s", base)
 	}
 	return nil, nil
 }
