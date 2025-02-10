@@ -1,9 +1,12 @@
 MOD_ARCH := $(shell uname -m)
 MOD_OS := $(shell uname -s)
+
 test:
 	go test
+
 lint:
-	golangci-lint run
+	golangci-lint run --timeout 10m
+
 module.tar.gz:
 ifeq ($(MOD_OS),Darwin)
 ifeq ($(MOD_ARCH),x86_64)
