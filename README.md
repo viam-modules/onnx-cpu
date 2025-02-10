@@ -48,15 +48,10 @@ The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML m
 ### Example configuration
 
 ```json
-    {
-      "name": "onnx",
-      "type": "mlmodel",
-      "model": "viam-labs:mlmodel:onnx-cpu",
-      "attributes": {
-        "model_path": "/path/to/onnx_file/detector_googlenet.onnx"
-        "label_path": "/path/to/labels.txt"
-      }
-    }
+{
+  "model_path": "${packages.ml_model.googlenet_ONNX}/detector_googlenet.onnx",
+  "label_path": "${packages.ml_model.googlenet_ONNX}/labels.txt",
+}
 ```
 
 ### Configure a vision service
