@@ -16,10 +16,11 @@ jobs:
     - uses: actions/setup-go@v5
       with:
         go-version: stable
+
     - name: Install dependencies
       run: go mod download
 
-    - name: Install dependencies
+    - name: Install golangci
       run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.61.0
 
     - name: Run lint
