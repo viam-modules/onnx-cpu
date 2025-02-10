@@ -5,7 +5,7 @@ test:
 	go test
 
 lint:
-	golangci-lint run --timeout 10m
+	golangci-lint run
 
 module.tar.gz:
 ifeq ($(MOD_OS),Darwin)
