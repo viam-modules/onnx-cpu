@@ -5,7 +5,6 @@ import (
 
 	onnx "github.com/viam-labs/onnx-cpu"
 	ort "github.com/yalue/onnxruntime_go"
-	"go.viam.com/rdk/logging"
 	"go.viam.com/rdk/module"
 	"go.viam.com/rdk/services/mlmodel"
 )
@@ -21,7 +20,7 @@ func realMain() error {
 	ctx := context.Background()
 	logger := logging.NewDebugLogger("client")
 
-	myMod, err := module.NewModuleFromArgs(ctx, logger)
+	myMod, err := module.NewModuleFromArgs(ctx)
 	if err != nil {
 		return err
 	}
