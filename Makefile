@@ -6,7 +6,11 @@ lint:
 	golangci-lint run
 
 module.tar.gz:
-ifeq ($(MOD_OS),Darwin)
+ifeq ($(VIAM_TARGET_OS),windows) # this needs to be at the top since windows is emulated
+	GOOS=windows GOARCH=amd64 go build -tags no_cgo -a -o module.exe ./cmd/module
+	jq '.entrypoint = "module.exe"' meta.json > temp.json && mv temp.json meta.json
+	tar -czf $@ module.exe third_party/onnxruntime.dll meta.json
+else ifeq ($(MOD_OS),Darwin)
 ifeq ($(MOD_ARCH),x86_64)
 	@echo "Unsupported OS: $(MOD_OS) or architecture: $(MOD_ARCH)"
 else ifeq ($(MOD_ARCH),arm64)
@@ -24,10 +28,6 @@ else ifeq ($(MOD_ARCH),aarch64)
 	go build -a -o module ./cmd/module
 	tar -czf $@ module third_party/onnxruntime_arm64.so
 endif
-else ifeq ($(VIAM_TARGET_OS),windows)
-	GOOS=windows GOARCH=amd64 go build -tags no_cgo -a -o module.exe ./cmd/module
-	jq '.entrypoint = "module.exe"' meta.json > temp.json && mv temp.json meta.json
-	tar -czf $@ module.exe third_party/onnxruntime.dll meta.json
 else
 	@echo "Unsupported OS: $(MOD_OS) or architecture: $(MOD_ARCH)"
 endif
