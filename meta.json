@@ -5,7 +5,7 @@
       "arch" : ["linux/amd64", "linux/arm64", "darwin/arm64", "windows/amd64"]
   },
   "visibility": "public",
-  "url": "https://github.com/viam-labs/onnx-cpu",
+  "url": "https://github.com/viam-modules/onnx-cpu",
   "description": "An ML Model Service that is used to run ONNX files. Comes with an embedded onnx runtime.",
   "models": [
     {
