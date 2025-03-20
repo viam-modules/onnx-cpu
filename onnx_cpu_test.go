@@ -39,7 +39,7 @@ func TestImageClassification(t *testing.T) {
 	inMap := ml.Tensors{}
 	inMap["input"] = tensor.New(
 		tensor.WithShape(1, resized.Bounds().Dy(), resized.Bounds().Dx(), 3),
-		tensor.WithBacking(rimage.ImageToFloatBuffer(resized)),
+		tensor.WithBacking(rimage.ImageToFloatBuffer(resized, false, nil, nil)),
 	)
 	err = inMap["input"].T(0, 3, 1, 2)
 	test.That(t, err, test.ShouldBeNil)
@@ -86,7 +86,7 @@ func TestImageDetection(t *testing.T) {
 	inMap := ml.Tensors{}
 	inMap["input_tensor"] = tensor.New(
 		tensor.WithShape(1, resized.Bounds().Dy(), resized.Bounds().Dx(), 3),
-		tensor.WithBacking(rimage.ImageToUInt8Buffer(resized)),
+		tensor.WithBacking(rimage.ImageToUInt8Buffer(resized, false)),
 	)
 	// infer
 	outMap, err := theModel.Infer(context.Background(), inMap)

@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 
-	onnx "github.com/viam-labs/onnx-cpu"
 	ort "github.com/yalue/onnxruntime_go"
 	"go.viam.com/rdk/module"
 	"go.viam.com/rdk/services/mlmodel"
+
+	onnx "github.com/viam-labs/onnx-cpu"
 )
 
 func main() {
@@ -18,7 +19,6 @@ func main() {
 func realMain() error {
 
 	ctx := context.Background()
-	logger := logging.NewDebugLogger("client")
 
 	myMod, err := module.NewModuleFromArgs(ctx)
 	if err != nil {
