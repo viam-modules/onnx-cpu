@@ -2,6 +2,8 @@
 
 This module allows you to deploy ONNX models which you can then use with the Viam `mlmodel` vision service on Android.
 
+latest version uses onnxruntime 1.23.2
+
 ## Requirements
 
 Before configuring your ML model, you must [create a machine](https://docs.viam.com/fleet/machines/#add-a-new-machine).
