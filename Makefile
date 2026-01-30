@@ -3,7 +3,7 @@ MOD_OS := $(shell uname -s)
 test:
 	go test
 lint:
-	golangci-lint run
+	golangci-lint run --timeout 10m
 
 module.tar.gz:
 ifeq ($(VIAM_TARGET_OS),windows) # this needs to be at the top since windows is emulated
