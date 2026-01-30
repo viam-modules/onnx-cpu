@@ -18,7 +18,7 @@ import (
 )
 
 // Model is the name of the module
-var Model = resource.ModelNamespace("viam-labs").WithFamily("mlmodel").WithModel("onnx-cpu")
+var Model = resource.ModelNamespace("viam").WithFamily("mlmodel").WithModel("onnx-cpu")
 
 // DataTypeMap maps the long ONNX data type labels to the data type as written in Go.
 var DataTypeMap = map[ort.TensorElementDataType]string{

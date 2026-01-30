@@ -7,7 +7,7 @@ import (
 	"go.viam.com/rdk/module"
 	"go.viam.com/rdk/services/mlmodel"
 
-	onnx "github.com/viam-labs/onnx-cpu"
+	onnx "github.com/viam-modules/onnx-cpu"
 )
 
 func main() {
