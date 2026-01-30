@@ -1,4 +1,4 @@
-module github.com/viam-labs/onnx-cpu
+module github.com/viam-modules/onnx-cpu
 
 go 1.25.1
 

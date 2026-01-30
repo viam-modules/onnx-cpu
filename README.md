@@ -10,7 +10,7 @@ Before configuring your ML model, you must [create a machine](https://docs.viam.
 
 ## Build and run
 
-To use this module, follow these instructions to [add a module from the Viam Registry](https://docs.viam.com/registry/configure/#add-a-modular-resource-from-the-viam-registry) and select the `viam-labs:mlmodel:onnx-cpu` model from the [`onnx-cpu` module](https://github.com/viam-labs/onnx-cpu).
+To use this module, follow these instructions to [add a module from the Viam Registry](https://docs.viam.com/registry/configure/#add-a-modular-resource-from-the-viam-registry) and select the `viam:mlmodel:onnx-cpu` model from the [`onnx-cpu` module](https://github.com/viam-modules/onnx-cpu).
 
 ## Configure your `onnx-cpu` ML model
 
@@ -37,7 +37,7 @@ If you prefer to configure your service using JSON, use the following attributes
 
 ### Attributes
 
-The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML model service:
+The following attributes are available for the `viam:mlmodel:onnx-cpu` ML model service:
 
 | Name    | Type   | Inclusion    | Description |
 | ------- | ------ | ------------ | ----------- |
@@ -53,7 +53,7 @@ The following attributes are available for the `viam-labs:mlmodel:onnx-cpu` ML m
     {
       "name": "onnx",
       "type": "mlmodel",
-      "model": "viam-labs:mlmodel:onnx-cpu",
+      "model": "viam:mlmodel:onnx-cpu",
       "attributes": {
         "model_path": "/path/to/onnx_file/detector_googlenet.onnx"
         "label_path": "/path/to/labels.txt"
@@ -116,7 +116,7 @@ tar -czf module.tar.gz module third_party/
 
 For Android, the Makefile will create the tar file.
 
-You can then add the module to app.viam.com locally. the model triplet is `viam-labs:mlmodel:onnx-cpu`.
+You can then add the module to app.viam.com locally. the model triplet is `viam:mlmodel:onnx-cpu`.
 
 ## License
 
