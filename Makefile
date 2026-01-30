@@ -7,7 +7,7 @@ lint:
 
 module.tar.gz:
 ifeq ($(VIAM_TARGET_OS),windows) # this needs to be at the top since windows is emulated
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -a -o module.exe ./cmd/module
+	CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc GOOS=windows GOARCH=amd64 go build -a -o module.exe ./cmd/module
 	jq '.entrypoint = "module.exe"' meta.json > temp.json && mv temp.json meta.json
 	tar -czf $@ module.exe third_party/onnxruntime.dll meta.json
 else ifeq ($(MOD_OS),Darwin)
