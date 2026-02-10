@@ -62,7 +62,7 @@ jobs:
       - name: Build
         run: go build -a -o module.exe ./cmd/module
       - name: Package
-        run: tar -czf module.tar.gz module.exe third_party/onnxruntime.dll
+        run: tar -czf module.tar.gz module.exe third_party/onnxruntime.dll meta.json
       - name: Install Viam CLI
         run: |
           Invoke-WebRequest -Uri "https://storage.googleapis.com/packages.viam.com/apps/viam-cli/viam-cli-latest-windows-amd64.exe" -OutFile "viam.exe"
