@@ -1,5 +1,9 @@
 MOD_ARCH := $(shell uname -m)
 MOD_OS := $(shell uname -s)
+
+clean:
+	rm -f module module.exe module.tar.gz bundle-droid-*.tar.gz
+
 test:
 	go test
 lint:
