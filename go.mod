@@ -6,7 +6,7 @@ require (
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/pkg/errors v0.9.1
 	github.com/yalue/onnxruntime_go v1.25.0
-	go.viam.com/rdk v0.111.0
+	go.viam.com/rdk v0.114.0
 	go.viam.com/test v1.2.4
 	go.viam.com/utils v0.4.8
 	gorgonia.org/tensor v0.9.24

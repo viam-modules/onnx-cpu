@@ -1,5 +1,9 @@
 MOD_ARCH := $(shell uname -m)
 MOD_OS := $(shell uname -s)
+
+clean:
+	rm -f module module.exe module.tar.gz bundle-droid-*.tar.gz
+
 test:
 	go test
 lint:
@@ -15,18 +19,18 @@ ifeq ($(MOD_ARCH),x86_64)
 	@echo "Unsupported OS: $(MOD_OS) or architecture: $(MOD_ARCH)"
 else ifeq ($(MOD_ARCH),arm64)
 	go build -a -o module ./cmd/module
-	tar -czf $@ module third_party/onnxruntime_arm64.dylib
+	tar -czf $@ module third_party/onnxruntime_arm64.dylib meta.json
 endif
 else ifeq ($(MOD_OS),Linux)
 ifeq ($(MOD_ARCH),x86_64)
 	go build -a -o module ./cmd/module
-	tar -czf $@ module third_party/onnxruntime.so
+	tar -czf $@ module third_party/onnxruntime.so meta.json
 else ifeq ($(MOD_ARCH),arm64)
 	go build -a -o module ./cmd/module
-	tar -czf $@ module third_party/onnxruntime_arm64.so
+	tar -czf $@ module third_party/onnxruntime_arm64.so meta.json
 else ifeq ($(MOD_ARCH),aarch64)
 	go build -a -o module ./cmd/module
-	tar -czf $@ module third_party/onnxruntime_arm64.so
+	tar -czf $@ module third_party/onnxruntime_arm64.so meta.json
 endif
 else
 	@echo "Unsupported OS: $(MOD_OS) or architecture: $(MOD_ARCH)"
