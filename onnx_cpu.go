@@ -167,6 +167,11 @@ func (ocpu *onnxCPU) DoCommand(ctx context.Context, cmd map[string]interface{}) 
 	return nil, resource.ErrDoUnimplemented
 }
 
+// Status returns the current status of the resource.
+func (ocpu *onnxCPU) Status(ctx context.Context) (map[string]interface{}, error) {
+	return map[string]interface{}{}, nil
+}
+
 // Metadata holds important info about the model, such as the name, shape, and data type of
 // its input and output tensors.
 func (ocpu *onnxCPU) Metadata(ctx context.Context) (mlmodel.MLMetadata, error) {
