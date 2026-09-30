@@ -195,17 +195,17 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 			return nil, err
 		}
 		defer func() {
-			utils.UncheckedError(destroyTensors(inputs))
+			utils.UncheckedError(destroyTensors[float32](inputs))
 		}()
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
 			outputs := make([]*ort.Tensor[float32], 0, lenOutputs)
-			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
+			outputs, err := runModel[float32, float32](ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
 				return nil, err
 			}
 			defer func() {
-				utils.UncheckedError(destroyTensors(outputs))
+				utils.UncheckedError(destroyTensors[float32](outputs))
 			}()
 			err = onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -213,12 +213,12 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 			}
 		case ort.TensorElementDataTypeUint8:
 			outputs := make([]*ort.Tensor[uint8], 0, lenOutputs)
-			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
+			outputs, err := runModel[float32, uint8](ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
 				return nil, err
 			}
 			defer func() {
-				utils.UncheckedError(destroyTensors(outputs))
+				utils.UncheckedError(destroyTensors[uint8](outputs))
 			}()
 			err = onnxTensorsToMlTensors(outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -234,17 +234,17 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 			return nil, err
 		}
 		defer func() {
-			utils.UncheckedError(destroyTensors(inputs))
+			utils.UncheckedError(destroyTensors[uint8](inputs))
 		}()
 		switch ocpu.session.OutputType {
 		case ort.TensorElementDataTypeFloat:
 			outputs := make([]*ort.Tensor[float32], 0, lenOutputs)
-			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
+			outputs, err := runModel[uint8, float32](ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
 				return nil, err
 			}
 			defer func() {
-				utils.UncheckedError(destroyTensors(outputs))
+				utils.UncheckedError(destroyTensors[float32](outputs))
 			}()
 			err = onnxTensorsToMlTensors[float32](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -252,12 +252,12 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 			}
 		case ort.TensorElementDataTypeUint8:
 			outputs := make([]*ort.Tensor[uint8], 0, lenOutputs)
-			outputs, err := runModel(ocpu.session.Session, lenOutputs, inputs, outputs)
+			outputs, err := runModel[uint8, uint8](ocpu.session.Session, lenOutputs, inputs, outputs)
 			if err != nil {
 				return nil, err
 			}
 			defer func() {
-				utils.UncheckedError(destroyTensors(outputs))
+				utils.UncheckedError(destroyTensors[uint8](outputs))
 			}()
 			err = onnxTensorsToMlTensors[uint8](outputs, outTensors, ocpu.session.OutputInfo)
 			if err != nil {
@@ -273,7 +273,7 @@ func (ocpu *onnxCPU) Infer(ctx context.Context, tensors ml.Tensors) (ml.Tensors,
 }
 
 func runModel[M, N ort.TensorData](session *ort.DynamicAdvancedSession, outputLen int, inputs []*ort.Tensor[M], outputs []*ort.Tensor[N]) ([]*ort.Tensor[N], error) {
-	arbIn := toArbitraryTensor(inputs)
+	arbIn := toArbitraryTensor[M](inputs)
 	arbOut := make([]ort.ArbitraryTensor, outputLen)
 	err := session.Run(arbIn, arbOut)
 	if err != nil {
